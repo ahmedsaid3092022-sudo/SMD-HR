@@ -42,6 +42,7 @@ interface NavbarProps {
   onLogout: () => void;
   onLockNow: () => void;
   isTimeLocked: boolean;
+  onOpenBackupModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -50,7 +51,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   onLogout,
   onLockNow,
-  isTimeLocked
+  isTimeLocked,
+  onOpenBackupModal
 }) => {
   const navItems: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
     { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
@@ -73,19 +75,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Zone 1: Brand Zone */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 rounded-lg p-1 bg-white border border-slate-200 shadow-xs flex items-center justify-center">
+            <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-xl p-1 bg-white border-2 border-blue-500/30 shadow-sm flex items-center justify-center shrink-0">
               <img 
                 src="/logo.png" 
-                alt="SMD Logo" 
-                className="w-full h-full object-contain"
+                alt="شعار شركة السويس لمشتقات الميثانول - SMD" 
+                className="w-full h-full object-contain filter drop-shadow-xs"
                 referrerPolicy="no-referrer"
               />
             </div>
             <div className="leading-tight">
-              <span className="text-base font-extrabold text-slate-900 tracking-tight whitespace-nowrap">
+              <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight whitespace-nowrap block">
                 SMD الموارد البشرية
               </span>
-              <span className="block text-[11px] text-blue-700 font-semibold whitespace-nowrap">
+              <span className="text-xs text-blue-800 font-bold whitespace-nowrap block">
                 شركة السويس لمشتقات الميثانول
               </span>
             </div>
@@ -114,15 +116,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Zone 3: Primary Action & Session Controls */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Universal Backup & Restore trigger */}
+            <button
+              onClick={onOpenBackupModal}
+              title="مركز استرداد وتصدير ملفات وبيانات المنظومة"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shadow-xs cursor-pointer"
+            >
+              <Database className="w-3.5 h-3.5 text-cyan-300" />
+              <span className="hidden sm:inline whitespace-nowrap">استرداد وتصدير الملفات</span>
+            </button>
+
             {/* Role indicator */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-lg text-slate-700 text-xs font-medium border border-slate-200">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/80 rounded-lg text-blue-900 text-xs font-bold border border-blue-200">
               {user.role === 'ADMIN' ? (
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
               ) : (
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                <ShieldAlert className="w-4 h-4 text-amber-600" />
               )}
-              <span className="whitespace-nowrap font-mono">{user.role === 'ADMIN' ? 'مسؤول (Admin)' : 'قارئ (Viewer)'}</span>
+              <span className="whitespace-nowrap font-sans">{user.role === 'ADMIN' ? 'مستخدم user (مستخدم)' : 'مستخدم قراءة فقط'}</span>
             </div>
 
             {/* Quick Licensing / Time-Lock trigger for Admin */}

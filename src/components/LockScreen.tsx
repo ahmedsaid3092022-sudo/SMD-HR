@@ -46,11 +46,11 @@ export const LockScreen: React.FC<LockScreenProps> = ({ reason, license, onUnloc
             <Lock className="w-10 h-10 animate-pulse" />
           </div>
 
-          <div className="w-16 h-16 mx-auto mb-3 bg-white p-1.5 rounded-xl shadow">
+          <div className="w-24 h-24 mx-auto mb-3 bg-white p-2 rounded-2xl shadow-xl border-2 border-red-500/30 flex items-center justify-center">
             <img 
               src="/logo.png" 
-              alt="SMD Logo" 
-              className="w-full h-full object-contain"
+              alt="شعار شركة السويس لمشتقات الميثانول - SMD" 
+              className="w-full h-full object-contain filter drop-shadow-xs"
               referrerPolicy="no-referrer"
             />
           </div>
@@ -79,7 +79,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ reason, license, onUnloc
         <form onSubmit={handleAttemptUnlock} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              مفتاح ترخيص مسؤول النظام (License Activation Key)
+              مفتاح ترخيص مستخدم النظام (User Activation Key)
             </label>
             <div className="relative">
               <input

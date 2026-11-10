@@ -36,7 +36,9 @@ import { DepartmentReports } from './components/DepartmentReports';
 import { SmartForms } from './components/SmartForms';
 import { ArchitectureAndDbView } from './components/ArchitectureAndDbView';
 import { LicensingManager } from './components/LicensingManager';
+import { BackupAndRestoreModal } from './components/BackupAndRestoreModal';
 import { calculateOvertime } from './utils/overtimeCalculator';
+import { Database } from 'lucide-react';
 
 export default function App() {
   // Session
@@ -57,6 +59,19 @@ export default function App() {
   // Modals & Navigation Helpers
   const [selectedProfileEmpId, setSelectedProfileEmpId] = useState<string | null>(null);
   const [smartFormEmpId, setSmartFormEmpId] = useState<string | undefined>(undefined);
+  const [showBackupModal, setShowBackupModal] = useState<boolean>(false);
+
+  const handleDataRestored = () => {
+    setEmployees(StorageService.getEmployees());
+    setAttendance(StorageService.getAttendance());
+    setLeaveBalances(StorageService.getLeaveBalances());
+    setLeaves(StorageService.getLeaves());
+    setPermits(StorageService.getPermits());
+    setMissions(StorageService.getMissions());
+    setDevices(StorageService.getDevices());
+    setBiometricLogs(StorageService.getBiometricLogs());
+    setLicense(StorageService.getLicense());
+  };
 
   // Time-Lock Expiry Check
   const lockStatus = StorageService.isSystemLocked();
@@ -104,7 +119,7 @@ export default function App() {
     const updated: UserSession = {
       ...user,
       role: newRole,
-      name: newRole === 'ADMIN' ? 'أ. محمد عبد الرحمن (مدير الموارد البشرية)' : 'أحمد السعيد (مشرف مراقبة - قارئ)'
+      name: newRole === 'ADMIN' ? 'أ. محمد عبد الرحمن (مستخدم user)' : 'أحمد السعيد (مستخدم قراءة فقط)'
     };
     setUser(updated);
     StorageService.setCurrentUser(updated);
@@ -278,6 +293,7 @@ export default function App() {
         onLogout={handleLogout}
         onLockNow={handleManualLock}
         isTimeLocked={license.isTimeLocked}
+        onOpenBackupModal={() => setShowBackupModal(true)}
       />
 
       {/* Main Container Viewport */}
@@ -401,13 +417,39 @@ export default function App() {
         />
       )}
 
+      {/* Universal Database Backup & Restore Center Modal */}
+      <BackupAndRestoreModal
+        isOpen={showBackupModal}
+        onClose={() => setShowBackupModal(false)}
+        employees={employees}
+        attendance={attendance}
+        leaveBalances={leaveBalances}
+        leaves={leaves}
+        permits={permits}
+        missions={missions}
+        onDataRestored={handleDataRestored}
+      />
+
+      {/* Universal Persistent Bottom-Corner Backup & Restore Quick Toolbar (Present on every page) */}
+      <div className="fixed bottom-4 left-4 z-40 no-print flex items-center gap-2">
+        <button
+          onClick={() => setShowBackupModal(true)}
+          className="px-3.5 py-2.5 bg-gradient-to-r from-blue-900 to-slate-900 hover:from-blue-800 hover:to-slate-800 text-white rounded-xl text-xs font-bold shadow-xl border border-blue-400/30 flex items-center gap-2 cursor-pointer transition-transform hover:scale-105 active:scale-95"
+          title="استرداد وتصدير ملفات وبيانات المنظومة - متاح في كافة الصفحات"
+        >
+          <Database className="w-4 h-4 text-cyan-300" />
+          <span className="hidden sm:inline">مركز استرداد وتصدير الملفات</span>
+          <span className="sm:hidden">استرداد وتصدير</span>
+        </button>
+      </div>
+
       {/* Quiet Corporate Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 no-print">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-800">شركة السويس لمشتقات الميثانول (SMD)</span>
             <span>·</span>
-            <span>الإدارة العامة للموارد البشرية والشؤون الإدارية</span>
+            <span>الإدارة العامة للموارد البشرية</span>
           </div>
           <div className="flex items-center gap-3 font-mono text-[11px] text-slate-400">
             <span>إصدار الخادم المحلي: v2.6.4</span>

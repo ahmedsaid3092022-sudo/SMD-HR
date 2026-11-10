@@ -1,195 +1,131 @@
 /**
  * SMD - Suez Methanol Derivatives Co.
- * Login Component with prominent SMD Logo & Dual Roles
+ * Login Component
+ * Displays ONLY:
+ * - اسم المستخدم ( User )
+ * - كلمة المرور ( Password )
+ * with prominent SMD logo.
  */
 
 import React, { useState } from 'react';
-import { UserSession, UserRole } from '../types';
-import { ShieldCheck, LogIn, Lock, Building2, User } from 'lucide-react';
+import { UserSession } from '../types';
+import { LogIn, Lock, User as UserIcon } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (session: UserSession) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('admin@smd.com.eg');
+  const [username, setUsername] = useState('User');
   const [password, setPassword] = useState('••••••••');
-  const [role, setRole] = useState<UserRole>('ADMIN');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === 'ADMIN') {
-      onLogin({
-        id: 'USR-001',
-        name: 'أ. محمد عبد الرحمن (مدير الموارد البشرية)',
-        email: email || 'admin@smd.com.eg',
-        role: 'ADMIN'
-      });
-    } else {
-      onLogin({
-        id: 'USR-002',
-        name: 'أحمد السعيد (مشرف مراقبة - قارئ)',
-        email: email || 'viewer@smd.com.eg',
-        role: 'VIEWER'
-      });
-    }
-  };
-
-  const handleQuickLogin = (selectedRole: UserRole) => {
-    if (selectedRole === 'ADMIN') {
-      onLogin({
-        id: 'USR-001',
-        name: 'أ. محمد عبد الرحمن (مدير الموارد البشرية)',
-        email: 'admin@smd.com.eg',
-        role: 'ADMIN'
-      });
-    } else {
-      onLogin({
-        id: 'USR-002',
-        name: 'أحمد السعيد (مشرف مراقبة - قارئ)',
-        email: 'viewer@smd.com.eg',
-        role: 'VIEWER'
-      });
-    }
+    onLogin({
+      id: 'USR-001',
+      name: username.trim() || 'User',
+      email: `${(username.trim() || 'user').toLowerCase().replace(/\s+/g, '.')}@smd.com.eg`,
+      role: 'ADMIN'
+    });
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 selection:bg-blue-600 selection:text-white">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-        {/* Header with prominent SMD Logo */}
-        <div className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 text-center text-white relative">
-          <div className="w-24 h-24 mx-auto mb-3 bg-white p-2 rounded-2xl shadow-lg flex items-center justify-center border-2 border-blue-500/30">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 selection:bg-blue-600 selection:text-white" dir="rtl">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        
+        {/* Header with Prominent, Large SMD Logo */}
+        <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-8 text-center text-white relative">
+          
+          {/* Enhanced Large Logo Container */}
+          <div className="w-36 h-36 sm:w-40 sm:h-40 mx-auto mb-4 bg-white p-3 rounded-3xl shadow-2xl flex items-center justify-center border-4 border-blue-500/40 ring-4 ring-blue-500/10 transition-transform hover:scale-105">
             <img 
               src="/logo.png" 
-              alt="شعار شركة السويس لمشتقات الميثانول - SMD" 
-              className="w-full h-full object-contain"
+              alt="شعار شركة السويس لمشتقات الميثانول - SMD HR" 
+              className="w-full h-full object-contain filter drop-shadow-sm"
               referrerPolicy="no-referrer"
             />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white mb-1">
+
+          <h1 className="text-xl font-black tracking-tight text-white mb-1">
             شركة السويس لمشتقات الميثانول
           </h1>
-          <p className="text-xs text-blue-300 font-medium">
+          <p className="text-xs text-blue-300 font-bold tracking-wide">
             Suez Methanol Derivatives Co. (SMD)
           </p>
-          <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-300 rounded-lg text-xs font-semibold border border-blue-500/20">
-            <span>الإدارة العامة للموارد البشرية والشؤون الإدارية</span>
+          <div className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 bg-blue-500/15 text-blue-200 rounded-lg text-xs font-bold border border-blue-500/30">
+            <span>الإدارة العامة للموارد البشرية</span>
           </div>
         </div>
 
-        {/* Form Body */}
-        <div className="p-6">
-          <div className="mb-4 text-center">
+        {/* Form Body - Contains ONLY Username and Password as requested */}
+        <div className="p-6 sm:p-8">
+          <div className="mb-6 text-center">
             <h2 className="text-base font-bold text-slate-800">
-              تسجيل الدخول للنظام الداخلي
+              تسجيل الدخول للنظام
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              منظومة مراقبة الحضور والانصراف، الورديات، وربط أجهزة ZKTeco
+              منظومة الموارد البشرية وإدارة الحضور والانصراف
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Field 1: اسم المستخدم ( User ) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                البريد الإلكتروني المؤسسي
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                اسم المستخدم ( User )
               </label>
               <div className="relative">
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-left font-mono"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full px-3.5 py-2.5 pl-10 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-left font-sans"
                   dir="ltr"
-                  placeholder="user@smd.com.eg"
+                  placeholder="User"
                   required
                 />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <UserIcon className="w-4 h-4" />
+                </div>
               </div>
             </div>
 
+            {/* Field 2: كلمة المرور ( Password ) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                كلمة المرور
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                كلمة المرور ( Password )
               </label>
               <div className="relative">
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-left font-mono"
+                  className="w-full px-3.5 py-2.5 pl-10 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-left font-mono"
                   dir="ltr"
-                  placeholder="••••••••"
+                  placeholder="Password"
                   required
                 />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                مستوى الصلاحية (Role)
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setRole('ADMIN'); setEmail('admin@smd.com.eg'); }}
-                  className={`py-2 px-3 text-xs font-medium rounded-lg border flex items-center justify-center gap-1.5 transition-colors ${
-                    role === 'ADMIN'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>مسؤول نظام (Admin)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setRole('VIEWER'); setEmail('viewer@smd.com.eg'); }}
-                  className={`py-2 px-3 text-xs font-medium rounded-lg border flex items-center justify-center gap-1.5 transition-colors ${
-                    role === 'VIEWER'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>مستخدم قراءة (Viewer)</span>
-                </button>
-              </div>
+            {/* Submit Button */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="w-full py-3 px-4 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>تسجيل الدخول</span>
+              </button>
             </div>
-
-            <button
-              type="submit"
-              className="w-full py-2.5 px-4 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer mt-2"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>دخول إلى لوحة التحكم</span>
-            </button>
           </form>
 
-          {/* Quick Demo Access Bar */}
-          <div className="mt-6 pt-5 border-t border-slate-200">
-            <p className="text-[11px] text-center text-slate-500 mb-2 font-medium">
-              دخول سريع للتجربة والتقييم:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('ADMIN')}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs rounded border border-slate-300 font-medium transition-colors"
-              >
-                دخول كمسؤول (Admin)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('VIEWER')}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs rounded border border-slate-300 font-medium transition-colors"
-              >
-                دخول كقارئ (Viewer)
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-[11px] text-slate-400">
-              خادم محلي مؤمن · إصدار الترخيص المؤسسي SMD-v2.6
+          <div className="mt-6 text-center">
+            <p className="text-[11px] text-slate-400 font-mono">
+              خادم محلي مؤمن · ترخيص شركة SMD-2026
             </p>
           </div>
         </div>

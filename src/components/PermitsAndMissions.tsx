@@ -3,7 +3,7 @@
  * Permits & Missions Management (Personal/Work Permits & Missions with Allowance)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   PermitRecord, 
   MissionRecord, 
@@ -20,8 +20,13 @@ import {
   CheckCircle2, 
   MapPin, 
   Car, 
-  DollarSign 
+  DollarSign,
+  Camera,
+  Upload,
+  Download
 } from 'lucide-react';
+import { PhotoImportModal } from './PhotoImportModal';
+import { parseExcelFile, exportPermitsToExcel, exportMissionsToExcel } from '../utils/fileExport';
 
 interface PermitsAndMissionsProps {
   permits: PermitRecord[];
@@ -45,6 +50,10 @@ export const PermitsAndMissions: React.FC<PermitsAndMissionsProps> = ({
   const [activeTab, setActiveTab] = useState<'permits' | 'missions'>('permits');
   const [showAddPermitModal, setShowAddPermitModal] = useState(false);
   const [showAddMissionModal, setShowAddMissionModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+
+  const excelFileRef = useRef<HTMLInputElement | null>(null);
 
   // Permit Form State
   const [pEmpId, setPEmpId] = useState(employees[0]?.employeeId || '');
@@ -107,11 +116,134 @@ export const PermitsAndMissions: React.FC<PermitsAndMissionsProps> = ({
     setMPurpose('');
   };
 
+  const handlePhotoImport = (rows: any[]) => {
+    if (activeTab === 'permits') {
+      rows.forEach(r => {
+        onAddPermit({
+          employeeId: r.employeeId || employees[0]?.employeeId || '1001',
+          permitType: r.permitType || 'إذن شخصي',
+          date: r.date || new Date().toISOString().split('T')[0],
+          startTime: r.startTime || '10:00',
+          endTime: r.endTime || '12:00',
+          durationHours: Number(r.durationHours) || 2,
+          reason: r.reason || 'إذن مصور ومستخرج ضوئياً',
+          status: 'معتمد',
+          approvedBy: user.name
+        });
+      });
+      setImportNotice(`تم استيراد ${rows.length} تصريح / إذن بنجاح عبر الكاميرا والمسح الضوئي.`);
+    } else {
+      rows.forEach(r => {
+        onAddMission({
+          employeeId: r.employeeId || employees[0]?.employeeId || '1001',
+          missionType: r.missionType || 'مأمورية ببدل',
+          destination: r.destination || 'موقع الشركة',
+          purpose: r.purpose || 'مأمورية مستخرجة ضوئياً',
+          startDate: r.startDate || new Date().toISOString().split('T')[0],
+          endDate: r.endDate || new Date().toISOString().split('T')[0],
+          daysCount: Number(r.daysCount) || 1,
+          allowancePerDay: Number(r.allowancePerDay) || 450,
+          totalAllowance: Number(r.totalAllowance) || (Number(r.daysCount || 1) * 450),
+          transportationType: r.transportationType || 'سيارة الشركة',
+          status: 'معتمد',
+          approvedBy: user.name
+        });
+      });
+      setImportNotice(`تم استيراد ${rows.length} أمر مأمورية بنجاح عبر الكاميرا والمسح الضوئي.`);
+    }
+    setTimeout(() => setImportNotice(null), 5000);
+  };
+
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const rows = await parseExcelFile(file);
+      if (activeTab === 'permits') {
+        let count = 0;
+        rows.forEach((r: any) => {
+          const empId = String(r['كود الموظف'] || r.employeeId || employees[0]?.employeeId || '1001');
+          onAddPermit({
+            employeeId: empId,
+            permitType: (r['نوع الإذن'] || r.permitType || 'إذن شخصي') as PermitType,
+            date: String(r['التاريخ'] || r.date || new Date().toISOString().split('T')[0]),
+            startTime: String(r['من الساعة'] || r.startTime || '09:00'),
+            endTime: String(r['إلى الساعة'] || r.endTime || '11:00'),
+            durationHours: Number(r['المدة (ساعات)'] || r.durationHours || 2),
+            reason: String(r['السبب'] || r.reason || 'مستورد من ملف Excel'),
+            status: 'معتمد',
+            approvedBy: user.name
+          });
+          count++;
+        });
+        setImportNotice(`تم استيراد ${count} إذن وتصريح خروج من ملف Excel بنجاح.`);
+      } else {
+        let count = 0;
+        rows.forEach((r: any) => {
+          const empId = String(r['كود الموظف'] || r.employeeId || employees[0]?.employeeId || '1001');
+          const days = Number(r['عدد الأيام'] || r.daysCount || 1);
+          const perDay = Number(r['البدل اليومي'] || r.allowancePerDay || 450);
+          onAddMission({
+            employeeId: empId,
+            missionType: (r['نوع المأمورية'] || r.missionType || 'مأمورية ببدل') as MissionType,
+            destination: String(r['الجهة والموقع'] || r.destination || 'موقع السويس'),
+            purpose: String(r['الغرض من التكليف'] || r.purpose || 'مستورد من ملف Excel'),
+            startDate: String(r['تاريخ البدء'] || r.startDate || new Date().toISOString().split('T')[0]),
+            endDate: String(r['تاريخ العودة'] || r.endDate || new Date().toISOString().split('T')[0]),
+            daysCount: days,
+            allowancePerDay: perDay,
+            totalAllowance: Number(r['إجمالي البدل (ج.م)'] || r.totalAllowance || (days * perDay)),
+            transportationType: (r['وسيلة الانتقال'] || r.transportationType || 'سيارة الشركة') as any,
+            status: 'معتمد',
+            approvedBy: user.name
+          });
+          count++;
+        });
+        setImportNotice(`تم استيراد ${count} مأمورية رسمية من ملف Excel بنجاح.`);
+      }
+      setTimeout(() => setImportNotice(null), 5000);
+    } catch (err) {
+      console.error(err);
+      alert('حدث خطأ أثناء قراءة ملف Excel، يرجى التأكد من صحة الملف وصيغته.');
+    } finally {
+      if (excelFileRef.current) excelFileRef.current.value = '';
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (activeTab === 'permits') {
+      exportPermitsToExcel(permits, employees);
+    } else {
+      exportMissionsToExcel(missions, employees);
+    }
+  };
+
   return (
     <div className="space-y-6">
       
+      {/* Hidden Excel file input */}
+      <input
+        ref={excelFileRef}
+        type="file"
+        accept=".xlsx, .xls, .csv"
+        className="hidden"
+        onChange={handleExcelImport}
+      />
+
+      {/* Import feedback notice */}
+      {importNotice && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{importNotice}</span>
+          </div>
+          <button onClick={() => setImportNotice(null)} className="text-emerald-700 hover:text-emerald-900 font-bold">✕</button>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900">
             إدارة الأذونات والمأموريات الرسمية
@@ -121,23 +253,56 @@ export const PermitsAndMissions: React.FC<PermitsAndMissionsProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Universal Import by Photo / Camera */}
+          <button
+            onClick={() => setShowPhotoModal(true)}
+            className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+            title="استيراد وتصوير مستند الإذن أو المأمورية بالكاميرا"
+          >
+            <Camera className="w-4 h-4 text-cyan-400" />
+            <span>استيراد وتصوير ({activeTab === 'permits' ? 'إذن' : 'مأمورية'})</span>
+          </button>
+
+          {/* Import Excel */}
+          <button
+            onClick={() => excelFileRef.current?.click()}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+            title="استيراد ملف Excel أو CSV"
+          >
+            <Upload className="w-3.5 h-3.5 text-blue-600" />
+            <span>استيراد Excel</span>
+          </button>
+
+          {/* Export Excel */}
+          <button
+            onClick={handleExportExcel}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+            title="تصدير السجل إلى Excel"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>تصدير Excel</span>
+          </button>
+
           {user.role === 'ADMIN' && (
             <>
-              <button
-                onClick={() => setShowAddPermitModal(true)}
-                className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>إصدار تصريح / إذن</span>
-              </button>
-              <button
-                onClick={() => setShowAddMissionModal(true)}
-                className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>إصدار أمر مأمورية</span>
-              </button>
+              {activeTab === 'permits' ? (
+                <button
+                  onClick={() => setShowAddPermitModal(true)}
+                  className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>إصدار تصريح / إذن</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowAddMissionModal(true)}
+                  className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>إصدار أمر مأمورية</span>
+                </button>
+              )}
             </>
           )}
         </div>
@@ -529,6 +694,17 @@ export const PermitsAndMissions: React.FC<PermitsAndMissionsProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Camera / Photo Import Scanner Modal */}
+      {showPhotoModal && (
+        <PhotoImportModal
+          domain={activeTab === 'permits' ? 'permits' : 'missions'}
+          title={activeTab === 'permits' ? 'استيراد وتصوير تصاريح وأذونات الخروج (كاميرا / OCR)' : 'استيراد وتصوير أوامر المأموريات (كاميرا / OCR)'}
+          description="التقط صورة مستند الإذن أو أمر التكليف بالمأمورية عبر الكاميرا المباشرة أو ارفع صورة المستند، وسيقوم النظام باستخراج البيانات واعتمادها فوراً."
+          onClose={() => setShowPhotoModal(false)}
+          onImportData={handlePhotoImport}
+        />
       )}
 
     </div>

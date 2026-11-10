@@ -20,9 +20,12 @@ import {
   CheckCircle2, 
   Clock, 
   AlertTriangle,
-  UserCheck
+  UserCheck,
+  Camera,
+  Upload
 } from 'lucide-react';
-import { exportLeaveBalancesToExcel } from '../utils/fileExport';
+import { exportLeaveBalancesToExcel, parseExcelFile } from '../utils/fileExport';
+import { PhotoImportModal } from './PhotoImportModal';
 
 interface LeaveAndBalancesProps {
   leaves: LeaveRecord[];
@@ -98,9 +101,80 @@ export const LeaveAndBalances: React.FC<LeaveAndBalancesProps> = ({
     setShowAddModal(false);
   };
 
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
+  const excelInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handlePhotoImport = (rows: any[]) => {
+    rows.forEach(r => {
+      onAddLeave({
+        employeeId: r.employeeId || '1004',
+        leaveType: (r.leaveType as LeaveType) || 'اعتيادي',
+        startDate: r.startDate || new Date().toISOString().split('T')[0],
+        endDate: r.endDate || new Date().toISOString().split('T')[0],
+        daysCount: Number(r.daysCount) || 1,
+        reason: r.reason || 'مستورد ضوئياً من صورة نموذج طلب الإجازة',
+        replacementEmployeeId: r.replacementEmployeeId || '',
+        status: 'معتمد',
+        approvedBy: user.name,
+        approvalDate: new Date().toISOString().split('T')[0],
+        notes: 'تم المسح الضوئي والاعتماد آلياً'
+      });
+    });
+    setImportSuccessMsg(`تم استيراد ${rows.length} طلب إجازة بنجاح وخصمها من الأرصدة!`);
+    setTimeout(() => setImportSuccessMsg(null), 3500);
+  };
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = await parseExcelFile(file);
+      if (rows.length === 0) {
+        alert('الملف فارغ أو لا يحتوي على بيانات صالحة.');
+        return;
+      }
+      let addedCount = 0;
+      rows.forEach((r: any) => {
+        const empId = String(r['كود الموظف'] || r['كود'] || r['Employee ID'] || r['employeeId'] || '1001');
+        const lType = (r['نوع الإجازة'] || r['Leave Type'] || 'اعتيادي') as LeaveType;
+        const sDate = String(r['تاريخ البدء'] || r['Start Date'] || new Date().toISOString().split('T')[0]);
+        const eDate = String(r['تاريخ الانتهاء'] || r['End Date'] || sDate);
+        const days = Number(r['عدد الأيام'] || r['Days'] || 1);
+        const reasonText = String(r['السبب'] || r['Reason'] || 'مستورد من ملف Excel');
+
+        onAddLeave({
+          employeeId: empId,
+          leaveType: lType,
+          startDate: sDate,
+          endDate: eDate,
+          daysCount: days,
+          reason: reasonText,
+          status: 'معتمد',
+          approvedBy: user.name,
+          approvalDate: new Date().toISOString().split('T')[0]
+        });
+        addedCount++;
+      });
+      setImportSuccessMsg(`تم استيراد ${addedCount} طلب إجازة بنجاح من ملف Excel!`);
+      setTimeout(() => setImportSuccessMsg(null), 3500);
+    } catch (err: any) {
+      alert('حدث خطأ أثناء قراءة ملف الإجازات: ' + (err.message || ''));
+    }
+  };
+
   return (
     <div className="space-y-6">
       
+      {/* Hidden Excel File Input */}
+      <input
+        ref={excelInputRef}
+        type="file"
+        accept=".xlsx, .xls, .csv"
+        className="hidden"
+        onChange={handleExcelUpload}
+      />
+
       {/* Header */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -108,11 +182,33 @@ export const LeaveAndBalances: React.FC<LeaveAndBalancesProps> = ({
             منظومة الإجازات والأرصدة القانونية بشركة SMD
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            متابعة أرصدة الاعتيادي والعارضة ودورة الإجازات المرضية كل 3 سنوات (90 يوماً طبقاً لقانون العمل المصري)
+            متابعة أرصدة الاعتيادي والعارضة ودورة الإجازات المرضية كل 3 سنوات مع ميزة استيراد الطلبات بالتصوير
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          
+          {/* CAMERA / PHOTO IMPORT BUTTON */}
+          <button
+            onClick={() => setShowPhotoModal(true)}
+            className="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="تصوير نموذج طلب الإجازة أو التقرير الطبي واستخراج البيانات آلياً"
+          >
+            <Camera className="w-4 h-4 text-cyan-200" />
+            <span>استيراد بالتصوير (كاميرا)</span>
+          </button>
+
+          {/* EXCEL IMPORT BUTTON */}
+          <button
+            onClick={() => excelInputRef.current?.click()}
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="استيراد إجازات من ملف Excel أو CSV"
+          >
+            <Upload className="w-4 h-4 text-slate-600" />
+            <span>استيراد Excel</span>
+          </button>
+
+          {/* EXCEL EXPORT BUTTON */}
           <button
             onClick={() => exportLeaveBalancesToExcel(balances, employees)}
             className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
@@ -121,17 +217,34 @@ export const LeaveAndBalances: React.FC<LeaveAndBalancesProps> = ({
             <span>تصدير الأرصدة (Excel)</span>
           </button>
 
-          {user.role === 'ADMIN' && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>طلب إجازة جديد</span>
-            </button>
-          )}
+          {/* ADD LEAVE BUTTON */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>طلب إجازة جديد</span>
+          </button>
         </div>
       </div>
+
+      {importSuccessMsg && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs rounded-xl flex items-center gap-2 shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-semibold">{importSuccessMsg}</span>
+        </div>
+      )}
+
+      {/* Photo Import Modal for Leaves */}
+      {showPhotoModal && (
+        <PhotoImportModal
+          domain="leaves"
+          title="استيراد طلبات الإجازات عن طريق التصوير (كاميرا / OCR)"
+          description="قم بتصوير نموذج طلب الإجازة الورقي أو التقرير الطبي، وسيقوم النظام باستخراج نوع الإجازة والفترة وخصمها من الرصيد تلقائياً."
+          onClose={() => setShowPhotoModal(false)}
+          onImportData={handlePhotoImport}
+        />
+      )}
 
       {/* Tabs Switcher: Balances vs Requests */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">

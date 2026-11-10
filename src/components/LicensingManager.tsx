@@ -238,7 +238,7 @@ export const LicensingManager: React.FC<LicensingManagerProps> = ({
                     : 'bg-white text-slate-700 border-slate-200'
                 }`}
               >
-                مسؤول (Admin)
+                مستخدم user (مستخدم)
               </button>
               <button
                 onClick={() => onSwitchRole('VIEWER')}
@@ -248,7 +248,7 @@ export const LicensingManager: React.FC<LicensingManagerProps> = ({
                     : 'bg-white text-slate-700 border-slate-200'
                 }`}
               >
-                قارئ (Viewer)
+                مستخدم قراءة فقط
               </button>
             </div>
             <p className="text-[11px] text-slate-500">

@@ -18,10 +18,13 @@ import {
   Filter, 
   CheckCircle2, 
   AlertCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Camera,
+  Upload
 } from 'lucide-react';
-import { exportAttendanceToExcel } from '../utils/fileExport';
+import { exportAttendanceToExcel, parseExcelFile } from '../utils/fileExport';
 import { calculateOvertime } from '../utils/overtimeCalculator';
+import { PhotoImportModal } from './PhotoImportModal';
 
 interface AttendanceManagerProps {
   attendance: AttendanceRecord[];
@@ -91,9 +94,99 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     setShowAddModal(false);
   };
 
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
+  const excelInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handlePhotoImport = (rows: any[]) => {
+    rows.forEach(r => {
+      const emp = empMap.get(r.employeeId);
+      const hourlyRate = emp?.hourlyRate || 85.0;
+      const ot = calculateOvertime(r.shiftType || 'NORMAL_DAY', r.checkIn || '08:00', r.checkOut || '16:00', hourlyRate);
+
+      onAddAttendance({
+        employeeId: r.employeeId || '1001',
+        date: r.date || new Date().toISOString().split('T')[0],
+        shiftType: r.shiftType || 'NORMAL_DAY',
+        checkIn: r.checkIn || '08:00',
+        checkOut: r.checkOut || '16:00',
+        workingHours: ot.actualWorkedHours,
+        standardHours: ot.standardHours,
+        overtimeHoursTotal: ot.totalOvertimeHours,
+        dayOvertimeHours: ot.dayOvertimeHours,
+        nightOvertimeHours: ot.nightOvertimeHours,
+        dayOvertimePay: ot.dayOvertimePay,
+        nightOvertimePay: ot.nightOvertimePay,
+        totalOvertimePay: ot.totalOvertimePay,
+        source: 'تصوير المستند (OCR Scan)',
+        status: ot.totalOvertimeHours > 0 ? 'إضافي' : 'حاضر',
+        notes: r.notes || 'مستورد آلياً عبر تصوير كشف البصمة'
+      });
+    });
+    setImportSuccessMsg(`تم استيراد ${rows.length} حركة حضور بنجاح واحتساب الإضافي آلياً!`);
+    setTimeout(() => setImportSuccessMsg(null), 3500);
+  };
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = await parseExcelFile(file);
+      if (rows.length === 0) {
+        alert('الملف فارغ أو لا يحتوي على بيانات صالحة.');
+        return;
+      }
+      let addedCount = 0;
+      rows.forEach((r: any) => {
+        const empId = String(r['كود الموظف'] || r['كود'] || r['Employee ID'] || r['employeeId'] || '1001');
+        const checkInTime = String(r['حضور'] || r['Check In'] || r['وقت الحضور'] || '08:00');
+        const checkOutTime = String(r['انصراف'] || r['Check Out'] || r['وقت الانصراف'] || '16:00');
+        const recordDate = String(r['التاريخ'] || r['Date'] || new Date().toISOString().split('T')[0]);
+        const shift = (r['الوردية']?.includes('نهار') ? 'DAY_SHIFT' : r['الوردية']?.includes('ليل') ? 'NIGHT_SHIFT' : 'NORMAL_DAY') as ShiftType;
+
+        const emp = empMap.get(empId);
+        const hourlyRate = emp?.hourlyRate || 85.0;
+        const ot = calculateOvertime(shift, checkInTime, checkOutTime, hourlyRate);
+
+        onAddAttendance({
+          employeeId: empId,
+          date: recordDate,
+          shiftType: shift,
+          checkIn: checkInTime,
+          checkOut: checkOutTime,
+          workingHours: ot.actualWorkedHours,
+          standardHours: ot.standardHours,
+          overtimeHoursTotal: ot.totalOvertimeHours,
+          dayOvertimeHours: ot.dayOvertimeHours,
+          nightOvertimeHours: ot.nightOvertimeHours,
+          dayOvertimePay: ot.dayOvertimePay,
+          nightOvertimePay: ot.nightOvertimePay,
+          totalOvertimePay: ot.totalOvertimePay,
+          source: 'استيراد ملف Excel',
+          status: ot.totalOvertimeHours > 0 ? 'إضافي' : 'حاضر',
+          notes: 'مستورد من ملف Excel / كشف الحضور'
+        });
+        addedCount++;
+      });
+      setImportSuccessMsg(`تم استيراد ${addedCount} حركة حضور بنجاح من ملف Excel!`);
+      setTimeout(() => setImportSuccessMsg(null), 3500);
+    } catch (err: any) {
+      alert('حدث خطأ أثناء قراءة ملف الحضور: ' + (err.message || ''));
+    }
+  };
+
   return (
     <div className="space-y-6">
       
+      {/* Hidden Excel File Input */}
+      <input
+        ref={excelInputRef}
+        type="file"
+        accept=".xlsx, .xls, .csv"
+        className="hidden"
+        onChange={handleExcelUpload}
+      />
+
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -101,30 +194,69 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             سجل الحضور والانصراف والورديات
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            متابعة البصمات الواردة من ZKTeco مع الفصل الدقيق بين الإضافي النهاري (1.35) والإضافي الليلي (1.70)
+            متابعة البصمات الواردة من ZKTeco مع استيراد الكشوف الورقية بالتصوير وتطبيق قاعدة الـ 6:00 م
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          
+          {/* CAMERA / PHOTO IMPORT BUTTON */}
+          <button
+            onClick={() => setShowPhotoModal(true)}
+            className="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="تصوير كشف الحضور الورقي واستخراج الحركات والإضافي آلياً"
+          >
+            <Camera className="w-4 h-4 text-cyan-200" />
+            <span>استيراد بالتصوير (كاميرا)</span>
+          </button>
+
+          {/* EXCEL IMPORT BUTTON */}
+          <button
+            onClick={() => excelInputRef.current?.click()}
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="استيراد سجلات الحضور من ملف Excel أو CSV"
+          >
+            <Upload className="w-4 h-4 text-slate-600" />
+            <span>استيراد Excel</span>
+          </button>
+
+          {/* EXCEL EXPORT BUTTON */}
           <button
             onClick={() => exportAttendanceToExcel(attendance, employees)}
             className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <Download className="w-4 h-4 text-slate-500" />
-            <span>تصدير تقرير الحضور (Excel)</span>
+            <span>تصدير Excel</span>
           </button>
 
-          {user.role === 'ADMIN' && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>تسجيل حركة حضور / إضافي</span>
-            </button>
-          )}
+          {/* ADD RECORD BUTTON */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>تسجيل حركة حضور / إضافي</span>
+          </button>
         </div>
       </div>
+
+      {importSuccessMsg && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs rounded-xl flex items-center gap-2 shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-semibold">{importSuccessMsg}</span>
+        </div>
+      )}
+
+      {/* Photo Import Modal for Attendance */}
+      {showPhotoModal && (
+        <PhotoImportModal
+          domain="attendance"
+          title="استيراد كشف الحضور والانصراف عن طريق التصوير (كاميرا / OCR)"
+          description="قم بتصوير كشف البصمات أو توقيعات الحضور الورقي، وسيقوم النظام بمسح الساعات وحساب الإضافي تلقائياً وفقاً لقاعدة الـ 6:00 م."
+          onClose={() => setShowPhotoModal(false)}
+          onImportData={handlePhotoImport}
+        />
+      )}
 
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row gap-3">

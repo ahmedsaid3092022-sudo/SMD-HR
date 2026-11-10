@@ -95,6 +95,160 @@ export function exportLeaveBalancesToExcel(balances: LeaveBalance[], employees: 
   exportToExcel(rows, `ارصدة_الاجازات_SMD_${new Date().getFullYear()}`, 'أرصدة الإجازات');
 }
 
+export function exportPermitsToExcel(permits: any[], employees: Employee[]) {
+  const empMap = new Map(employees.map(e => [e.employeeId, e]));
+  const rows = permits.map(p => {
+    const emp = empMap.get(p.employeeId);
+    return {
+      'رقم الإذن': p.id,
+      'كود الموظف': p.employeeId,
+      'اسم الموظف': emp?.name || '',
+      'الإدارة / القطاع': emp?.department || '',
+      'نوع الإذن': p.permitType,
+      'التاريخ': p.date,
+      'من الساعة': p.startTime,
+      'إلى الساعة': p.endTime,
+      'المدة (ساعات)': p.durationHours,
+      'السبب': p.reason,
+      'المعتمد': p.approvedBy || '',
+      'الحالة': p.status
+    };
+  });
+  exportToExcel(rows, `سجل_الاذونات_والتصاريح_SMD_${new Date().toISOString().split('T')[0]}`, 'الأذونات');
+}
+
+export function exportMissionsToExcel(missions: any[], employees: Employee[]) {
+  const empMap = new Map(employees.map(e => [e.employeeId, e]));
+  const rows = missions.map(m => {
+    const emp = empMap.get(m.employeeId);
+    return {
+      'رقم التكليف': m.id,
+      'كود الموظف': m.employeeId,
+      'اسم الموظف': emp?.name || '',
+      'الإدارة / القطاع': emp?.department || '',
+      'نوع المأمورية': m.missionType,
+      'الجهة والموقع': m.destination,
+      'الغرض من التكليف': m.purpose,
+      'تاريخ البدء': m.startDate,
+      'تاريخ العودة': m.endDate,
+      'عدد الأيام': m.daysCount,
+      'البدل اليومي': m.allowancePerDay || 0,
+      'إجمالي البدل (ج.م)': m.totalAllowance || 0,
+      'وسيلة الانتقال': m.transportationType,
+      'المعتمد': m.approvedBy || '',
+      'الحالة': m.status
+    };
+  });
+  exportToExcel(rows, `سجل_الماموريات_وبدلات_السفر_SMD_${new Date().toISOString().split('T')[0]}`, 'المأموريات');
+}
+
+export function exportAllSheetsToExcel(data: {
+  employees: Employee[];
+  attendance: AttendanceRecord[];
+  balances: LeaveBalance[];
+  leaves: LeaveRecord[];
+  permits: any[];
+  missions: any[];
+}) {
+  const workbook = XLSX.utils.book_new();
+  const empMap = new Map(data.employees.map(e => [e.employeeId, e]));
+
+  // Employees sheet
+  const empRows = data.employees.map(e => ({
+    'م': e.serial,
+    'كود الموظف': e.employeeId,
+    'الاسم بالكامل': e.name,
+    'رقم المحمول': e.mobile,
+    'البريد الإلكتروني': e.email,
+    'المسمى الوظيفي': e.currentTitle,
+    'الوظيفة': e.position,
+    'المسمى المكلف به': e.assignedTitle || '',
+    'الإدارة / القطاع': e.department,
+    'نوع العقد': e.contractType,
+    'الدرجة الوظيفية': e.grade,
+    'موقع العمل': e.workLocation,
+    'الرقم القومي': e.nationalId,
+    'الرقم التأميني': e.insuranceId,
+    'أجر الساعة (ج.م)': e.hourlyRate,
+    'تاريخ التعيين': e.hireDate,
+    'الحالة': e.isActive ? 'على رأس العمل' : 'متوقف'
+  }));
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(empRows), 'دليل العاملين');
+
+  // Attendance sheet
+  const attRows = data.attendance.map(r => {
+    const emp = empMap.get(r.employeeId);
+    return {
+      'كود الموظف': r.employeeId,
+      'الاسم': emp?.name || '',
+      'الإدارة / القطاع': emp?.department || '',
+      'التاريخ': r.date,
+      'الوردية': r.shiftType,
+      'حضور': r.checkIn,
+      'انصراف': r.checkOut,
+      'ساعات العمل': r.workingHours,
+      'إجمالي الإضافي (س)': r.overtimeHoursTotal,
+      'إضافي نهاري (س - قبل 6م)': r.dayOvertimeHours,
+      'إضافي ليلي (س - بعد 6م)': r.nightOvertimeHours,
+      'قيمة الإضافي المستحق (ج.م)': r.totalOvertimePay,
+      'الحالة': r.status,
+      'المصدر': r.source,
+      'ملاحظات': r.notes || ''
+    };
+  });
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(attRows), 'الحضور والانصراف');
+
+  // Leave Balances
+  const balRows = data.balances.map(b => {
+    const emp = empMap.get(b.employeeId);
+    return {
+      'كود الموظف': b.employeeId,
+      'اسم الموظف': emp?.name || '',
+      'الإدارة': emp?.department || '',
+      'اعتيادي متبقي': Math.max(0, b.annualOpening - b.annualUsed),
+      'عارضة متبقي': Math.max(0, b.casualOpening - b.casualUsed),
+      'مرضي متبقي': Math.max(0, b.sickOpening - b.sickUsed)
+    };
+  });
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(balRows), 'أرصدة الإجازات');
+
+  // Permits
+  const pRows = data.permits.map(p => {
+    const emp = empMap.get(p.employeeId);
+    return {
+      'رقم الإذن': p.id,
+      'كود الموظف': p.employeeId,
+      'اسم الموظف': emp?.name || '',
+      'نوع الإذن': p.permitType,
+      'التاريخ': p.date,
+      'الفترة': `${p.startTime} - ${p.endTime}`,
+      'المدة (س)': p.durationHours,
+      'السبب': p.reason,
+      'الحالة': p.status
+    };
+  });
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(pRows), 'الأذونات والتصاريح');
+
+  // Missions
+  const mRows = data.missions.map(m => {
+    const emp = empMap.get(m.employeeId);
+    return {
+      'رقم التكليف': m.id,
+      'كود الموظف': m.employeeId,
+      'اسم الموظف': emp?.name || '',
+      'نوع المأمورية': m.missionType,
+      'الجهة': m.destination,
+      'الغرض': m.purpose,
+      'الأيام': m.daysCount,
+      'إجمالي البدل': m.totalAllowance || 0,
+      'الحالة': m.status
+    };
+  });
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(mRows), 'المأموريات الرسمية');
+
+  XLSX.writeFile(workbook, `قاعدة_بيانات_شاملة_SMD_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 /**
  * Generates an official Microsoft Word (.doc) document
  * with SMD corporate styling, Arabic RTL formatting, and tables.
@@ -148,7 +302,7 @@ export function exportToWordDocument(title: string, htmlContent: string, filenam
     <body>
       <div class="header-box">
         <h2 style="margin: 0; color: #0f172a;">شركة السويس لمشتقات الميثانول (ش.م.م) - SMD</h2>
-        <h4 style="margin: 4px 0; color: #0284c7;">الإدارة العامة للموارد البشرية والشؤون الإدارية</h4>
+        <h4 style="margin: 4px 0; color: #0284c7;">الإدارة العامة للموارد البشرية</h4>
         <p style="margin: 2px 0; font-size: 11px; color: #64748b;">سجل تجاري 14890 - السويس - مصر | نظام الحضور والانصراف الإلكتروني</p>
       </div>
       ${htmlContent}
@@ -168,3 +322,27 @@ export function exportToWordDocument(title: string, htmlContent: string, filenam
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Parses an uploaded Excel (.xlsx, .xls) or CSV file into a JSON array of rows.
+ */
+export async function parseExcelFile(file: File): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        resolve(json);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+}
+

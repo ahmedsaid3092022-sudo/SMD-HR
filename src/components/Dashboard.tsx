@@ -63,21 +63,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-6">
       
-      {/* Top Welcome & Notification Banner */}
+      {/* Top Welcome & Notification Banner with Prominent Large SMD Logo */}
       <div className="bg-gradient-to-r from-blue-900 via-slate-900 to-slate-900 rounded-2xl p-6 text-white shadow-md relative overflow-hidden border border-blue-900/40">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-blue-500/20 text-blue-300 rounded text-xs font-semibold mb-2">
-              <span>شركة السويس لمشتقات الميثانول - مصنع السويس</span>
-              <span>·</span>
-              <span>خادم محلي مؤمن</span>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-2xl p-2 border-2 border-blue-400/50 shadow-xl flex items-center justify-center shrink-0">
+              <img 
+                src="/logo.png" 
+                alt="شعار شركة السويس لمشتقات الميثانول - SMD" 
+                className="w-full h-full object-contain filter drop-shadow-xs"
+                referrerPolicy="no-referrer"
+              />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white">
-              مرحباً، {user.name}
-            </h1>
-            <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              منظومة الموارد البشرية المركزية ومتابعة البصمات ZKTeco وحساب الوقت الإضافي طبقاً للحد الفاصل 6:00 مساءً.
-            </p>
+            <div>
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-blue-500/20 text-blue-300 rounded text-xs font-semibold mb-2">
+                <span>شركة السويس لمشتقات الميثانول - مصنع السويس</span>
+                <span>·</span>
+                <span>خادم محلي مؤمن</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                مرحباً، {user.name}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                منظومة الموارد البشرية المركزية، سحب بيانات ZKTeco، استيراد الكشوف بالتصوير، وحساب الإضافي.
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">

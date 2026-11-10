@@ -177,7 +177,7 @@ export interface AttendanceRecord {
   nightOvertimePay: number;   // القيمة المالية للإضافي الليلي
   totalOvertimePay: number;   // إجمالي قيمة الإضافي المستحق
   
-  source: 'ZKTeco-Biometric' | 'يدوي (معدل بواسطة المشرف)' | 'تطبيق محلي';
+  source: 'ZKTeco-Biometric' | 'يدوي (معدل بواسطة المشرف)' | 'تطبيق محلي' | 'تصوير المستند (OCR Scan)' | 'استيراد ملف Excel';
   deviceId?: string;
   notes?: string;
   status: 'حاضر' | 'متأخر' | 'انصراف مبكر' | 'إضافي' | 'غياب' | 'إجازة' | 'مأمورية';
